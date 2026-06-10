@@ -1,0 +1,53 @@
+{% extends 'password_generator/base.html' %}
+
+{% block title %}Verify Code - SecureKey{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card card-custom p-4 p-md-5 shadow-sm border-0 animate-fade-in">
+            <div class="text-center mb-4">
+                <i class="bi bi-patch-check-fill fs-1 text-primary d-block mb-2"></i>
+                <h1 class="h3 fw-bold mb-1">Enter Verification Code</h1>
+                <p class="text-muted small">We've sent a 6-digit OTP code to:</p>
+                <div class="badge bg-secondary-subtle text-secondary-emphasis px-3 py-2 fs-6 font-monospace rounded-pill border">{{ email }}</div>
+            </div>
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                {{ form.non_field_errors.0 }}
+            </div>
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+                
+                <!-- OTP Input -->
+                <div class="mb-4">
+                    <label for="{{ form.otp.id_for_label }}" class="form-label fw-semibold text-center d-block mb-3">6-Digit OTP</label>
+                    <div style="max-width: 280px; margin: 0 auto;">
+                        {{ form.otp }}
+                    </div>
+                    {% if form.otp.errors %}
+                    <div class="text-danger text-center small mt-2">
+                        <i class="bi bi-exclamation-circle me-1"></i>{{ form.otp.errors.0 }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm shrink-btn transition-btn">
+                    Verify & Access Generator
+                </button>
+            </form>
+
+            <div class="text-center mt-4 border-top pt-3">
+                <p class="text-muted small mb-1">Didn't receive the email, or code expired?</p>
+                <a href="{% url 'password_generator:login' %}" class="small fw-semibold text-decoration-none">
+                    <i class="bi bi-arrow-left-short"></i>Back to Log In
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

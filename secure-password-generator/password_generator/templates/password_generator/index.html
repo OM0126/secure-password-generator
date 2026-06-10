@@ -1,0 +1,247 @@
+{% extends 'password_generator/base.html' %}
+
+{% block title %}SecureKey - Cryptographically Secure Password Generator{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Left Column: Generator Form and Result -->
+    <div class="col-lg-7">
+        <div class="card card-custom p-4 shadow-sm border-0 mb-4">
+            <h1 class="card-title h3 mb-4 fw-bold d-flex align-items-center gap-2">
+                <i class="bi bi-cpu text-primary"></i>
+                Generate Secure Password
+            </h1>
+            
+            <!-- Alert for errors -->
+            <div class="alert alert-danger d-none" id="errorAlert" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span id="errorMessage"></span>
+            </div>
+
+            <!-- Form -->
+            <form id="passwordForm" method="POST" action="{% url 'password_generator:generate' %}">
+                {% csrf_token %}
+                
+                <!-- Length Slider -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label for="lengthRange" class="form-label fw-semibold mb-0">Password Length</label>
+                        <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill" id="lengthVal">16</span>
+                    </div>
+                    <input type="range" class="form-range custom-slider" min="8" max="50" id="lengthRange" name="length" value="16">
+                    <div class="d-flex justify-content-between text-muted small px-1">
+                        <span>8 (Weakest)</span>
+                        <span>24</span>
+                        <span>36</span>
+                        <span>50 (Strongest)</span>
+                    </div>
+                </div>
+
+                <!-- Checkbox Settings -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold mb-3">Character Settings</label>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch card-switch p-3 rounded border">
+                                <input class="form-check-input ms-0 me-3 float-start" type="checkbox" id="upperCheck" name="include_uppercase" checked>
+                                <label class="form-check-label fw-medium" for="upperCheck">
+                                    Uppercase Letters
+                                    <span class="d-block text-muted small fw-normal">A-Z (e.g. ABCDE)</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch card-switch p-3 rounded border">
+                                <input class="form-check-input ms-0 me-3 float-start" type="checkbox" id="lowerCheck" name="include_lowercase" checked>
+                                <label class="form-check-label fw-medium" for="lowerCheck">
+                                    Lowercase Letters
+                                    <span class="d-block text-muted small fw-normal">a-z (e.g. abcde)</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch card-switch p-3 rounded border">
+                                <input class="form-check-input ms-0 me-3 float-start" type="checkbox" id="numbersCheck" name="include_numbers" checked>
+                                <label class="form-check-label fw-medium" for="numbersCheck">
+                                    Numbers
+                                    <span class="d-block text-muted small fw-normal">0-9 (e.g. 12345)</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch card-switch p-3 rounded border">
+                                <input class="form-check-input ms-0 me-3 float-start" type="checkbox" id="specialCheck" name="include_special" checked>
+                                <label class="form-check-label fw-medium" for="specialCheck">
+                                    Special Characters
+                                    <span class="d-block text-muted small fw-normal">!@#$%^&* (e.g. &*#$%)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100 py-3 fw-bold d-flex align-items-center justify-content-center gap-2 shadow-sm rounded-3 transition-btn" id="generateBtn">
+                    <i class="bi bi-shield-lock-fill"></i>
+                    Generate Password
+                </button>
+            </form>
+        </div>
+
+        <!-- Result Box (Hidden until generated) -->
+        <div class="card card-custom p-4 shadow-sm border-0 d-none animate-fade-in" id="resultCard">
+            <h2 class="card-title h4 mb-3 fw-bold text-success d-flex align-items-center gap-2">
+                <i class="bi bi-check-circle-fill"></i>
+                Generated Password
+            </h2>
+            
+            <!-- Result Field -->
+            <div class="position-relative mb-4">
+                <div class="p-3 bg-body-tertiary border rounded-3 password-display d-flex align-items-center justify-content-between overflow-x-auto">
+                    <code class="fs-4 text-break font-monospace" id="passwordOutput">Loading...</code>
+                    <button class="btn btn-primary px-3 py-2 rounded-2 d-flex align-items-center gap-2 shadow-sm ms-3 shrink-btn" id="copyBtn" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to clipboard">
+                        <i class="bi bi-copy" id="copyIcon"></i>
+                        <span id="copyText">Copy</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Strength Meter -->
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-semibold">Password Strength:</span>
+                    <span class="badge fs-6 px-3 py-1 fw-bold" id="strengthBadge">Strong</span>
+                </div>
+                <div class="progress progress-custom" style="height: 12px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" id="strengthProgress"></div>
+                </div>
+            </div>
+
+            <!-- Strength Details & Entropy -->
+            <div class="row g-2 text-center text-md-start">
+                <div class="col-md-6 border-end-md">
+                    <div class="p-2">
+                        <div class="text-muted small">Estimated Entropy</div>
+                        <div class="fs-4 fw-extrabold text-primary" id="entropyVal">78.4 bits</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-2">
+                        <div class="text-muted small">Security Analysis</div>
+                        <div class="small fw-semibold mt-1" id="securityFeedback">Strong protection! Suitable for personal accounts.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: History and Stats -->
+    <div class="col-lg-5">
+        <!-- Stats Dashboard -->
+        <div class="card card-custom p-4 shadow-sm border-0 mb-4">
+            <h3 class="card-title h4 mb-3 fw-bold d-flex align-items-center gap-2">
+                <i class="bi bi-bar-chart-fill text-primary"></i>
+                Session Statistics
+            </h3>
+            
+            <div class="row g-3 text-center mb-4">
+                <div class="col-6">
+                    <div class="p-3 bg-body-tertiary border rounded-3">
+                        <div class="text-muted small mb-1">Total Generated</div>
+                        <div class="fs-2 fw-extrabold text-primary" id="statTotal">{{ stats.total }}</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-3 bg-body-tertiary border rounded-3">
+                        <div class="text-muted small mb-1">Avg. Entropy</div>
+                        <div class="fs-2 fw-extrabold text-primary" id="statAvgEntropy">{{ stats.avg_entropy }} bits</div>
+                    </div>
+                </div>
+            </div>
+
+            <h4 class="h6 fw-bold mb-3">Strength Distribution</h4>
+            <div class="mb-2">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>Weak</span>
+                    <span id="statWeakCount">{{ stats.weak_count }} ({{ stats.weak_pct }}%)</span>
+                </div>
+                <div class="progress mb-2" style="height: 6px;">
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: {{ stats.weak_pct }}%;" aria-valuenow="{{ stats.weak_pct }}" aria-valuemin="0" aria-valuemax="100" id="barWeak"></div>
+                </div>
+            </div>
+            <div class="mb-2">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>Medium</span>
+                    <span id="statMediumCount">{{ stats.medium_count }} ({{ stats.medium_pct }}%)</span>
+                </div>
+                <div class="progress mb-2" style="height: 6px;">
+                    <div class="progress-bar bg-warning" role="progressbar" style="width: {{ stats.medium_pct }}%;" aria-valuenow="{{ stats.medium_pct }}" aria-valuemin="0" aria-valuemax="100" id="barMedium"></div>
+                </div>
+            </div>
+            <div class="mb-2">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>Strong</span>
+                    <span id="statStrongCount">{{ stats.strong_count }} ({{ stats.strong_pct }}%)</span>
+                </div>
+                <div class="progress mb-2" style="height: 6px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ stats.strong_pct }}%;" aria-valuenow="{{ stats.strong_pct }}" aria-valuemin="0" aria-valuemax="100" id="barStrong"></div>
+                </div>
+            </div>
+            <div class="mb-0">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>Very Strong</span>
+                    <span id="statVeryStrongCount">{{ stats.very_strong_count }} ({{ stats.very_strong_pct }}%)</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-info" role="progressbar" style="width: {{ stats.very_strong_pct }}%;" aria-valuenow="{{ stats.very_strong_pct }}" aria-valuemin="0" aria-valuemax="100" id="barVeryStrong"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Card -->
+        <div class="card card-custom p-4 shadow-sm border-0">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="card-title h4 mb-0 fw-bold d-flex align-items-center gap-2">
+                    <i class="bi bi-clock-history text-primary"></i>
+                    Session History
+                </h3>
+                <button class="btn btn-outline-danger btn-sm rounded-pill px-3 {% if not history %}d-none{% endif %}" id="clearHistoryBtn">
+                    <i class="bi bi-trash-fill me-1"></i>
+                    Clear
+                </button>
+            </div>
+
+            <!-- Empty History Message -->
+            <div class="text-center py-4 text-muted {% if history %}d-none{% endif %}" id="emptyHistoryMsg">
+                <i class="bi bi-shield-slash fs-1 text-muted opacity-50 mb-2 d-block"></i>
+                <p class="mb-0">No passwords generated in this session yet.</p>
+            </div>
+
+            <!-- History List -->
+            <div class="list-group list-group-flush overflow-y-auto" style="max-height: 350px;" id="historyList">
+                {% for item in history %}
+                <div class="list-group-item bg-transparent px-0 py-3 border-bottom border-light-subtle">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge bg-{{ item.color }} text-dark-emphasis">{{ item.strength }}</span>
+                        <small class="text-muted">{{ item.created_at|slice:":19" }}</small>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center gap-3">
+                        <code class="text-break fs-6 font-monospace overflow-hidden text-nowrap text-truncate" style="max-width: 75%;">{{ item.password }}</code>
+                        <button class="btn btn-sm btn-outline-secondary px-2 py-1 rounded-2 copy-history-btn shrink-btn" data-password="{{ item.password }}" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy password">
+                            <i class="bi bi-copy"></i>
+                        </button>
+                    </div>
+                    <div class="d-flex gap-1 mt-2 flex-wrap">
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill xs-badge">len: {{ item.length }}</span>
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill xs-badge">ent: {{ item.entropy }}</span>
+                        {% if item.options.upper %}<span class="badge bg-light text-dark rounded-pill xs-badge">A-Z</span>{% endif %}
+                        {% if item.options.lower %}<span class="badge bg-light text-dark rounded-pill xs-badge">a-z</span>{% endif %}
+                        {% if item.options.digits %}<span class="badge bg-light text-dark rounded-pill xs-badge">0-9</span>{% endif %}
+                        {% if item.options.special %}<span class="badge bg-light text-dark rounded-pill xs-badge">#$&</span>{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
