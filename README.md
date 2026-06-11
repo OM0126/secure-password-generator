@@ -128,14 +128,5 @@ A secure password should:
 * Copy-to-clipboard functionality
 * Password breach detection API integration
 
-##
-
-##
-
----
-
-##  Author
-
+##  
 OM
-
-GitHub: https://github.com/OM0126
